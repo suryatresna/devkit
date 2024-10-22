@@ -50,6 +50,12 @@ func init() {
 }
 
 func publishMessage(cmd *cobra.Command, args []string) {
+	start := time.Now()
+
+	defer func() {
+		fmt.Println("elapsed time:", time.Since(start))
+	}()
+
 	brokers := cmd.Flag("brokers").Value.String()
 	if brokers == "" {
 		fmt.Println("brokers is required")
@@ -107,4 +113,5 @@ func publishMessage(cmd *cobra.Command, args []string) {
 		fmt.Println(string(jsonOut))
 	}
 
+	fmt.Println("done")
 }
