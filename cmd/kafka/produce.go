@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/signal"
 	"strings"
 	"time"
 
@@ -51,9 +52,16 @@ func init() {
 
 func publishMessage(cmd *cobra.Command, args []string) {
 	start := time.Now()
-
 	defer func() {
 		fmt.Println("elapsed time:", time.Since(start))
+	}()
+
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go func() {
+		<-c
+		os.Exit(1)
+		fmt.Println("interrupted, elapsed time: ", time.Since(start))
 	}()
 
 	brokers := cmd.Flag("brokers").Value.String()
