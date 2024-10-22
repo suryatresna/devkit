@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -18,7 +19,7 @@ import (
 var produceCmd = &cobra.Command{
 	Use:   "produce",
 	Short: "produce message to kafka",
-	Long: `Produce message to kafka via command 
+	Long: `Produce message to kafka via command
 	Example:
 	app kafka produce --brokers 127.0.0.1:19092 --topic FooTopic  --json '{"topic":"topic_name","message":"message"}'
 
@@ -49,7 +50,6 @@ func init() {
 }
 
 func publishMessage(cmd *cobra.Command, args []string) {
-
 	brokers := cmd.Flag("brokers").Value.String()
 	if brokers == "" {
 		fmt.Println("brokers is required")
@@ -58,6 +58,9 @@ func publishMessage(cmd *cobra.Command, args []string) {
 
 	kgoOpts := []kgo.Opt{
 		kgo.SeedBrokers(strings.Split(brokers, ",")...),
+		kgo.RetryBackoffFn(func(int) time.Duration { return time.Second }),
+		kgo.RecordRetries(3),
+		kgo.ProducerBatchCompression(kgo.GzipCompression()),
 	}
 
 	broker, err := kgo.NewClient(kgoOpts...)
