@@ -12,7 +12,7 @@ go install github.com/suryatresna/devkit@latest
 
 ## Kafka
 ```bash
-devkit kafka produce --brokers 127.0.0.1:19092 --topic stock.costing  --jsonfile tmp/testjson.json
+devkit kafka produce --brokers 127.0.0.1:19092 --topic topic.foo.bar  --jsonfile tmp/testjson.json
 ```
 
 ## Gocraft
