@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"time"
 
@@ -41,6 +42,7 @@ func init() {
 	consumeCmd.Flags().StringP("group", "g", "", "consumer group")
 	consumeCmd.Flags().StringP("topic", "t", "", "topic name")
 	consumeCmd.Flags().StringP("brokers", "b", "", "brokers")
+	consumeCmd.Flags().StringP("poll", "o", "1", "max poll offset")
 
 }
 
@@ -68,6 +70,13 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 
 	topic := cmd.Flag("topic").Value.String()
 
+	pollStr := cmd.Flag("poll").Value.String()
+	poll, err := strconv.Atoi(pollStr)
+	if err != nil {
+		fmt.Println("poll format is invalid")
+		return
+	}
+
 	seeds := kgo.SeedBrokers(strings.Split(brokers, ",")...)
 
 	var adm *kadm.Client
@@ -94,7 +103,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	defer cl.Close()
 
 	fmt.Println("Waiting for one record...")
-	fs := cl.PollRecords(context.Background(), 1)
+	fs := cl.PollRecords(context.Background(), poll)
 
 	if err := adm.CommitAllOffsets(context.Background(), group, kadm.OffsetsFromFetches(fs)); err != nil {
 		fmt.Println("failed to commit offsets")
