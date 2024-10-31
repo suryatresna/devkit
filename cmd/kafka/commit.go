@@ -17,32 +17,34 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
-// consumeCmd represents the consumer command
-var consumeCmd = &cobra.Command{
-	Use:   "consumer",
-	Short: "consume manual message commit",
+// commitCmd represents the consumer command
+var commitCmd = &cobra.Command{
+	Use:   "commit",
+	Short: "consume manual commit",
 	Long: `Consumer message to kafka via command
+	Example:
+		devkit kafka commit --brokers localhost:9092 --group my-group --topic my-topic --poll 1
 	`,
 	Run: consumeMessage,
 }
 
 func init() {
-	KafkaCmd.AddCommand(consumeCmd)
+	KafkaCmd.AddCommand(commitCmd)
 
 	// Here you will define your flags and configuration settings.
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:
-	// consumeCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// commitCmd.PersistentFlags().String("foo", "", "A help for foo")
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	// consumeCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	// commitCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
-	consumeCmd.Flags().StringP("group", "g", "", "consumer group")
-	consumeCmd.Flags().StringP("topic", "t", "", "topic name")
-	consumeCmd.Flags().StringP("brokers", "b", "", "brokers")
-	consumeCmd.Flags().StringP("poll", "o", "1", "max poll offset")
+	commitCmd.Flags().StringP("group", "g", "", "consumer group")
+	commitCmd.Flags().StringP("topic", "t", "", "topic name")
+	commitCmd.Flags().StringP("brokers", "b", "", "brokers")
+	commitCmd.Flags().IntP("poll", "o", 1, "max poll offset")
 
 }
 
@@ -83,7 +85,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	{
 		cl, err := kgo.NewClient(seeds)
 		if err != nil {
-			fmt.Println("failed to create client")
+			fmt.Println("failed to create client. err ", err)
 			return
 		}
 		adm = kadm.NewClient(cl)
@@ -91,26 +93,32 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 
 	os, err := adm.FetchOffsetsForTopics(context.Background(), group, topic)
 	if err != nil {
-		fmt.Println("failed to fetch offsets")
+		fmt.Println("failed to fetch offsets. err ", err)
 		return
 	}
 
 	cl, err := kgo.NewClient(seeds, kgo.ConsumePartitions(os.KOffsets()))
 	if err != nil {
-		fmt.Println("failed to create client")
+		fmt.Println("failed to create client. err ", err)
 		return
 	}
 	defer cl.Close()
 
-	fmt.Println("Waiting for one record...")
+	fmt.Printf("Waiting for %d record...\n", poll)
 	fs := cl.PollRecords(context.Background(), poll)
 
 	if err := adm.CommitAllOffsets(context.Background(), group, kadm.OffsetsFromFetches(fs)); err != nil {
-		fmt.Println("failed to commit offsets")
+		fmt.Println("failed to commit offsets. err ", err)
 		return
 	}
 
-	r := fs.Records()[0]
+	records := fs.Records()
+
+	r := records[len(records)-1]
 	fmt.Printf("Successfully committed record on partition %d at offset %d!\n", r.Partition, r.Offset)
+
+	for i, record := range records {
+		fmt.Printf("record:%d: %s\n", i, string(record.Value))
+	}
 
 }
