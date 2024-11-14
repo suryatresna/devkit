@@ -43,6 +43,7 @@ func init() {
 	sqlShellCmd.Flags().StringP("user", "u", "", "user of database")
 	sqlShellCmd.Flags().StringP("password", "P", "", "password of database")
 	sqlShellCmd.Flags().StringP("database", "d", "", "database name")
+	sqlShellCmd.Flags().StringP("sslmode", "l", "", "sslmode")
 
 }
 
@@ -54,6 +55,7 @@ func sqlShellHandler(cmd *cobra.Command, args []string) {
 		Username: cmd.Flag("user").Value.String(),
 		Password: cmd.Flag("password").Value.String(),
 		DBName:   cmd.Flag("database").Value.String(),
+		SslMode:  cmd.Flag("sslmode").Value.String(),
 	})
 	if err != nil {
 		fmt.Println(err)
