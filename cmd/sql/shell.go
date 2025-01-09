@@ -3,6 +3,7 @@ package sql
 import (
 	"fmt"
 	"math"
+	"os"
 	"reflect"
 	"strconv"
 	"time"
@@ -44,6 +45,7 @@ func init() {
 	sqlShellCmd.Flags().StringP("password", "P", "", "password of database")
 	sqlShellCmd.Flags().StringP("database", "d", "", "database name")
 	sqlShellCmd.Flags().StringP("sslmode", "l", "", "sslmode")
+	sqlShellCmd.Flags().StringP("script", "c", "", "script")
 
 }
 
@@ -66,6 +68,13 @@ func sqlShellHandler(cmd *cobra.Command, args []string) {
 
 	sqlSh := newSqlShell(sqlcon)
 
+	if cmd.Flag("script").Value.String() != "" {
+		fmt.Println("Executing script")
+		sqlSh.SqlRunByFile(cmd.Flag("script").Value.String())
+		fmt.Println("Script executed")
+		return
+	}
+
 	shell := ishell.New()
 
 	shell.AddCmd(&ishell.Cmd{
@@ -85,6 +94,70 @@ func newSqlShell(db database.DBInterface) sqlShell {
 	return sqlShell{
 		db: db,
 	}
+}
+
+func (s sqlShell) SqlRunByFile(fileInput string) {
+	// open file and execute the query
+	file, err := os.Open(fileInput)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+
+	// read file
+	qry := ""
+	buf := make([]byte, 1024)
+	for {
+		n, err := file.Read(buf)
+		if err != nil {
+			break
+		}
+		qry += string(buf[:n])
+	}
+
+	rows, err := s.db.Queryx(qry)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	defer rows.Close()
+
+	var out []map[string]interface{} = []map[string]interface{}{}
+
+	for rows.Next() {
+		// Create a slice of interface{}'s to represent each column,
+		// and a second slice to contain pointers to each item in the columns slice.
+		var outRow map[string]interface{} = map[string]interface{}{}
+		if errMap := rows.MapScan(outRow); errMap != nil {
+			fmt.Println(errMap)
+			return
+		}
+
+		var newOutRow map[string]interface{} = map[string]interface{}{}
+		for k, v := range outRow {
+			switch v.(type) {
+			case []uint8:
+				newOutRow[k] = fmt.Sprintf("%.2f", parseFloat(v.([]uint8)))
+			case int64:
+				newOutRow[k] = strconv.FormatInt(v.(int64), 10)
+			case time.Time:
+				newOutRow[k] = v.(time.Time).Format("2006-01-02 15:04:05")
+			case nil:
+				newOutRow[k] = "NULL"
+			default:
+				fmt.Printf("col:%s ;Type: %v\n", k, reflect.TypeOf(v))
+				newOutRow[k] = v
+			}
+		}
+
+		out = append(out, newOutRow)
+	}
+
+	tableprinter.SetSortedHeaders(true)
+	tableprinter.Print(out)
+
 }
 
 func (s sqlShell) SqlShellContext(c *ishell.Context) {
