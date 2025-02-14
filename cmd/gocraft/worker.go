@@ -39,8 +39,8 @@ func init() {
 	workerCmd.Flags().StringP("job", "j", "", "job name worker")
 	workerCmd.Flags().StringP("ns", "n", "", "name space worker")
 	workerCmd.Flags().StringP("redis", "r", "", "host redis")
-	workerCmd.Flags().StringP("pwd", "a", "", "password")
-	workerCmd.Flags().StringP("username", "u", "", "username")
+	workerCmd.Flags().StringP("pwd", "a", "", "password redis")
+	workerCmd.Flags().StringP("username", "u", "", "username redis")
 	workerCmd.Flags().StringP("json", "v", "", "json payload worker")
 
 }
