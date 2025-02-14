@@ -39,6 +39,7 @@ func init() {
 	workerCmd.Flags().StringP("job", "j", "", "job name worker")
 	workerCmd.Flags().StringP("ns", "n", "", "name space worker")
 	workerCmd.Flags().StringP("redis", "r", "", "host redis")
+	workerCmd.Flags().StringP("pwd", "a", "", "password")
 	workerCmd.Flags().StringP("json", "v", "", "json payload worker")
 
 }
@@ -49,6 +50,8 @@ func addWorker(cmd *cobra.Command, args []string) {
 		fmt.Println("redis host is required")
 		return
 	}
+
+	pwd := cmd.Flag("pwd").Value.String()
 
 	ns := cmd.Flag("ns").Value.String()
 	if redisHost == "" {
@@ -81,6 +84,9 @@ func addWorker(cmd *cobra.Command, args []string) {
 		MaxIdle:   5,
 		Wait:      true,
 		Dial: func() (redis.Conn, error) {
+			if pwd != "" {
+				return redis.Dial("tcp", redisHost, redis.DialPassword(pwd))
+			}
 			return redis.Dial("tcp", redisHost)
 		},
 	}
