@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
@@ -105,7 +104,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	}
 	defer cl.Close()
 
-	adm := kadm.NewClient(cl)
+	// adm := kadm.NewClient(cl)
 
 	fmt.Printf("[INFO] Waiting for %d record(s)...\n", poll)
 	totalRecords := int64(0)
