@@ -145,7 +145,8 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 			}
 
 			offsets := kadm.OffsetsFromFetches(fetches)
-			if err := adm.CommitAllOffsets(context.Background(), group, offsets); err != nil {
+			_, err := adm.CommitOffsets(context.Background(), group, offsets)
+			if err != nil {
 				fmt.Printf("Failed to commit offsets: %v\n", err)
 				return
 			}
