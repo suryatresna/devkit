@@ -108,7 +108,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 
 	adm := kadm.NewClient(cl)
 
-	fmt.Printf("Waiting for %d record(s)...\n", poll)
+	fmt.Printf("[INFO] Waiting for %d record(s)...\n", poll)
 	totalRecords := 0
 
 	// Poll until we get the desired number of records or context is canceled
@@ -125,7 +125,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 			// Handle errors if any
 			if errs := fetches.Errors(); len(errs) > 0 {
 				for _, err := range errs {
-					fmt.Printf("poll error: %v\n", err)
+					fmt.Printf("[ERR] poll error: %v\n", err)
 				}
 				return
 			}
@@ -139,7 +139,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 			totalRecords += len(records)
 			for i, record := range records {
 				if !skipLog {
-					fmt.Printf("record:%d: %s (partition: %d, offset: %d)\n",
+					fmt.Printf("[INFO] record:%d: %s (partition: %d, offset: %d)\n",
 						i, string(record.Value), record.Partition, record.Offset)
 				}
 			}
@@ -147,20 +147,22 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 			offsets := kadm.OffsetsFromFetches(fetches)
 			_, err := adm.CommitOffsets(context.Background(), group, offsets)
 			if err != nil {
-				fmt.Printf("Failed to commit offsets: %v\n", err)
+				fmt.Printf("[ERR] Failed to commit offsets: %v\n", err)
 				return
 			}
 
+			fmt.Printf("[INFO] Successfully committed %d/%d record(s)!\n", totalRecords, poll)
+
 			if !skipLog {
 				lastRecord := records[len(records)-1]
-				fmt.Printf("Successfully committed record on partition %d at offset %d!\n",
+				fmt.Printf("[INFO] Successfully committed record on partition %d at offset %d!\n",
 					lastRecord.Partition, lastRecord.Offset)
 			}
 		}
 	}
 
 	if skipLog {
-		fmt.Printf("Successfully committed %d record(s)!\n", totalRecords)
+		fmt.Printf("[INFO] Successfully committed %d record(s)!\n", totalRecords)
 	}
 
 }
