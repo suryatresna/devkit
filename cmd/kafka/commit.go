@@ -45,6 +45,7 @@ func init() {
 	commitCmd.Flags().StringP("topic", "t", "", "topic name")
 	commitCmd.Flags().StringP("brokers", "b", "", "brokers")
 	commitCmd.Flags().IntP("poll", "o", 1, "max poll offset")
+	commitCmd.Flags().BoolP("skip-log", "l", false, "skip log")
 
 }
 
@@ -69,13 +70,10 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	}
 
 	group := cmd.Flag("group").Value.String()
-	// Add check for group presence
-	if group == "" {
-		fmt.Println("group is required")
-		return
-	}
 
 	topic := cmd.Flag("topic").Value.String()
+
+	skipLog := cmd.Flag("skip-log").Value.String()
 
 	pollStr := cmd.Flag("poll").Value.String()
 	poll, err := strconv.Atoi(pollStr)
@@ -88,7 +86,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 
 	var adm *kadm.Client
 	{
-		cl, err := kgo.NewClient(seeds)
+		cl, err := kgo.NewClient(seeds, kgo.ConsumerGroup(group))
 		if err != nil {
 			fmt.Println("failed to create client. err ", err)
 			return
@@ -96,15 +94,15 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 		adm = kadm.NewClient(cl)
 	}
 
-	// os, err := adm.FetchOffsetsForTopics(context.Background(), group, topic)
-	// if err != nil {
-	// 	fmt.Println("failed to fetch offsets. err ", err)
-	// 	return
-	// }
+	os, err := adm.FetchOffsetsForTopics(context.Background(), group, topic)
+	if err != nil {
+		fmt.Println("failed to fetch offsets. err ", err)
+		return
+	}
 
 	cl, err := kgo.NewClient(seeds,
+		kgo.ConsumePartitions(os.KOffsets()),
 		kgo.ConsumerGroup(group),
-		kgo.ConsumeTopics(topic), // replaced direct-partition consuming option
 	)
 	if err != nil {
 		fmt.Println("failed to create client. err ", err)
@@ -125,8 +123,10 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	r := records[len(records)-1]
 	fmt.Printf("Successfully committed record on partition %d at offset %d!\n", r.Partition, r.Offset)
 
-	for i, record := range records {
-		fmt.Printf("record:%d: %s\n", i, string(record.Value))
+	if skipLog != "true" {
+		for i, record := range records {
+			fmt.Printf("record:%d: %s\n", i, string(record.Value))
+		}
 	}
 
 }
