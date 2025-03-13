@@ -117,7 +117,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 			return
 		default:
 
-			fetches := cl.PollRecords(ctx, 10000)
+			fetches := cl.PollFetches(ctx)
 			if fetches.IsClientClosed() {
 				return
 			}
@@ -132,9 +132,14 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 
 			totalRecords += int64(fetches.NumRecords())
 
-			offsets := kadm.OffsetsFromFetches(fetches)
-			err := adm.CommitAllOffsets(context.Background(), group, offsets)
-			if err != nil {
+			// offsets := kadm.OffsetsFromFetches(fetches)
+			// _, err := adm.CommitOffsets(context.Background(), group, offsets)
+			// if err != nil {
+			// 	fmt.Printf("[ERR] Failed to commit offsets: %v\n", err)
+			// 	return
+			// }
+
+			if err := cl.CommitUncommittedOffsets(ctx); err != nil {
 				fmt.Printf("[ERR] Failed to commit offsets: %v\n", err)
 				return
 			}
