@@ -117,7 +117,7 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 		case <-ctx.Done():
 			return
 		default:
-			fetches := cl.PollRecords(ctx, poll)
+			fetches := cl.PollRecords(ctx, 10000)
 			if fetches.IsClientClosed() {
 				return
 			}
