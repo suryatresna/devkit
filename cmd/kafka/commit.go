@@ -84,17 +84,30 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 
 	seeds := kgo.SeedBrokers(strings.Split(brokers, ",")...)
 
+	var adm *kadm.Client
+	{
+		cl, err := kgo.NewClient(seeds)
+		if err != nil {
+			fmt.Println("failed to create client. err ", err)
+			return
+		}
+		adm = kadm.NewClient(cl)
+	}
+
+	os, err := adm.FetchOffsetsForTopics(context.Background(), group, topic)
+	if err != nil {
+		fmt.Println("failed to fetch offsets. err ", err)
+		return
+	}
+
 	cl, err := kgo.NewClient(seeds,
-		kgo.ConsumeTopics(topic),
-		kgo.ConsumerGroup(group),
+		kgo.ConsumePartitions(os.KOffsets()),
 	)
 	if err != nil {
 		fmt.Println("failed to create client. err ", err)
 		return
 	}
 	defer cl.Close()
-
-	adm := kadm.NewClient(cl)
 
 	fmt.Printf("Waiting for %d record...\n", poll)
 	fs := cl.PollRecords(context.Background(), poll)
@@ -104,15 +117,16 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	records := fs.Records()
-
-	r := records[len(records)-1]
-	fmt.Printf("Successfully committed record on partition %d at offset %d!\n", r.Partition, r.Offset)
-
 	if skipLog != "true" {
+		records := fs.Records()
+
+		r := records[len(records)-1]
+		fmt.Printf("Successfully committed record on partition %d at offset %d!\n", r.Partition, r.Offset)
 		for i, record := range records {
 			fmt.Printf("record:%d: %s\n", i, string(record.Value))
 		}
+	} else {
+		fmt.Printf("Successfully committed record!\n")
 	}
 
 }
