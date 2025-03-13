@@ -69,6 +69,11 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	}
 
 	group := cmd.Flag("group").Value.String()
+	// Add check for group presence
+	if group == "" {
+		fmt.Println("group is required")
+		return
+	}
 
 	topic := cmd.Flag("topic").Value.String()
 
@@ -97,7 +102,9 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	cl, err := kgo.NewClient(seeds, kgo.ConsumePartitions(os.KOffsets()))
+	cl, err := kgo.NewClient(seeds,
+		kgo.ConsumerGroup(group), // added to join consumer group
+		kgo.ConsumePartitions(os.KOffsets()))
 	if err != nil {
 		fmt.Println("failed to create client. err ", err)
 		return
