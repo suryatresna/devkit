@@ -84,24 +84,8 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 
 	seeds := kgo.SeedBrokers(strings.Split(brokers, ",")...)
 
-	var adm *kadm.Client
-	{
-		cl, err := kgo.NewClient(seeds, kgo.ConsumerGroup(group))
-		if err != nil {
-			fmt.Println("failed to create client. err ", err)
-			return
-		}
-		adm = kadm.NewClient(cl)
-	}
-
-	os, err := adm.FetchOffsetsForTopics(context.Background(), group, topic)
-	if err != nil {
-		fmt.Println("failed to fetch offsets. err ", err)
-		return
-	}
-
 	cl, err := kgo.NewClient(seeds,
-		kgo.ConsumePartitions(os.KOffsets()),
+		kgo.ConsumeTopics(topic),
 		kgo.ConsumerGroup(group),
 	)
 	if err != nil {
@@ -109,6 +93,8 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 		return
 	}
 	defer cl.Close()
+
+	adm := kadm.NewClient(cl)
 
 	fmt.Printf("Waiting for %d record...\n", poll)
 	fs := cl.PollRecords(context.Background(), poll)
