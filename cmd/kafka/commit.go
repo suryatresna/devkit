@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
@@ -57,9 +56,12 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	go func() {
 		<-c
-		os.Exit(1)
+		cancel()
 		fmt.Println("interrupted, elapsed time: ", time.Since(start))
 	}()
 
@@ -70,10 +72,16 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	}
 
 	group := cmd.Flag("group").Value.String()
+	if group == "" {
+		fmt.Println("group is required")
+		return
+	}
 
 	topic := cmd.Flag("topic").Value.String()
-
-	skipLog := cmd.Flag("skip-log").Value.String()
+	if topic == "" {
+		fmt.Println("topic is required")
+		return
+	}
 
 	pollStr := cmd.Flag("poll").Value.String()
 	poll, err := strconv.Atoi(pollStr)
@@ -82,51 +90,73 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	seeds := kgo.SeedBrokers(strings.Split(brokers, ",")...)
+	skipLog, _ := strconv.ParseBool(cmd.Flag("skip-log").Value.String())
 
-	var adm *kadm.Client
-	{
-		cl, err := kgo.NewClient(seeds)
-		if err != nil {
-			fmt.Println("failed to create client. err ", err)
-			return
-		}
-		adm = kadm.NewClient(cl)
-	}
-
-	os, err := adm.FetchOffsetsForTopics(context.Background(), group, topic)
-	if err != nil {
-		fmt.Println("failed to fetch offsets. err ", err)
-		return
-	}
-
-	cl, err := kgo.NewClient(seeds,
-		kgo.ConsumePartitions(os.KOffsets()),
+	// Configure the Kafka client with consumer group settings
+	cl, err := kgo.NewClient(
+		kgo.SeedBrokers(strings.Split(brokers, ",")...),
+		kgo.ConsumerGroup(group),                                          // Join the consumer group
+		kgo.ConsumeTopics(topic),                                          // Subscribe to the topic
+		kgo.WithLogger(kgo.BasicLogger(os.Stderr, kgo.LogLevelInfo, nil)), // Optional: for debugging
 	)
 	if err != nil {
-		fmt.Println("failed to create client. err ", err)
+		fmt.Println("failed to create client. err:", err)
 		return
 	}
 	defer cl.Close()
 
-	fmt.Printf("Waiting for %d record...\n", poll)
-	fs := cl.PollRecords(context.Background(), poll)
+	fmt.Printf("Waiting for %d record(s)...\n", poll)
+	totalRecords := 0
 
-	if err := adm.CommitAllOffsets(context.Background(), group, kadm.OffsetsFromFetches(fs)); err != nil {
-		fmt.Println("failed to commit offsets. err ", err)
-		return
+	// Poll until we get the desired number of records or context is canceled
+	for totalRecords < poll {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			fetches := cl.PollFetches(ctx)
+			if fetches.IsClientClosed() {
+				return
+			}
+
+			// Handle errors if any
+			if errs := fetches.Errors(); len(errs) > 0 {
+				for _, err := range errs {
+					fmt.Printf("poll error: %v\n", err)
+				}
+				return
+			}
+
+			// Process fetched records
+			records := fetches.Records()
+			if len(records) == 0 {
+				continue
+			}
+
+			totalRecords += len(records)
+			for i, record := range records {
+				if !skipLog {
+					fmt.Printf("record:%d: %s (partition: %d, offset: %d)\n",
+						i, string(record.Value), record.Partition, record.Offset)
+				}
+			}
+
+			// Manually commit offsets
+			if err := cl.CommitRecords(ctx, records...); err != nil {
+				fmt.Println("failed to commit offsets. err:", err)
+				return
+			}
+
+			if !skipLog {
+				lastRecord := records[len(records)-1]
+				fmt.Printf("Successfully committed record on partition %d at offset %d!\n",
+					lastRecord.Partition, lastRecord.Offset)
+			}
+		}
 	}
 
-	if skipLog != "true" {
-		records := fs.Records()
-
-		r := records[len(records)-1]
-		fmt.Printf("Successfully committed record on partition %d at offset %d!\n", r.Partition, r.Offset)
-		for i, record := range records {
-			fmt.Printf("record:%d: %s\n", i, string(record.Value))
-		}
-	} else {
-		fmt.Printf("Successfully committed record!\n")
+	if skipLog {
+		fmt.Printf("Successfully committed %d record(s)!\n", totalRecords)
 	}
 
 }
