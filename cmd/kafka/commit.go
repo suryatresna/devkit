@@ -96,15 +96,16 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 		adm = kadm.NewClient(cl)
 	}
 
-	os, err := adm.FetchOffsetsForTopics(context.Background(), group, topic)
-	if err != nil {
-		fmt.Println("failed to fetch offsets. err ", err)
-		return
-	}
+	// os, err := adm.FetchOffsetsForTopics(context.Background(), group, topic)
+	// if err != nil {
+	// 	fmt.Println("failed to fetch offsets. err ", err)
+	// 	return
+	// }
 
 	cl, err := kgo.NewClient(seeds,
-		kgo.ConsumerGroup(group), // added to join consumer group
-		kgo.ConsumePartitions(os.KOffsets()))
+		kgo.ConsumerGroup(group),
+		kgo.ConsumeTopics(topic), // replaced direct-partition consuming option
+	)
 	if err != nil {
 		fmt.Println("failed to create client. err ", err)
 		return
