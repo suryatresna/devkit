@@ -10,8 +10,10 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	"github.com/alitto/pond/v2"
 	"github.com/spf13/cobra"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -46,7 +48,7 @@ func init() {
 	commitCmd.Flags().StringP("brokers", "b", "", "brokers")
 	commitCmd.Flags().IntP("poll", "o", 1, "max poll offset")
 	commitCmd.Flags().BoolP("skip-log", "l", false, "skip log")
-
+	commitCmd.Flags().IntP("concurrency", "c", 100, "concurrency")
 }
 
 func consumeMessage(cmd *cobra.Command, args []string) {
@@ -91,6 +93,13 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 		return
 	}
 
+	concurrencyStr := cmd.Flag("concurrency").Value.String()
+	concurrency, err := strconv.Atoi(concurrencyStr)
+	if err != nil {
+		fmt.Println("concurrency format is invalid")
+		return
+	}
+
 	skipLog, _ := strconv.ParseBool(cmd.Flag("skip-log").Value.String())
 
 	// Configure the Kafka client with consumer group settings
@@ -109,57 +118,62 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	adm := kadm.NewClient(cl)
 
 	fmt.Printf("[INFO] Waiting for %d record(s)...\n", poll)
-	totalRecords := 0
+	totalRecords := int64(0)
 
+	pool := pond.NewPool(concurrency)
 	// Poll until we get the desired number of records or context is canceled
-	for totalRecords < poll {
+	for totalRecords < int64(poll) {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-			fetches := cl.PollRecords(ctx, 10000)
-			if fetches.IsClientClosed() {
-				return
-			}
-
-			// Handle errors if any
-			if errs := fetches.Errors(); len(errs) > 0 {
-				for _, err := range errs {
-					fmt.Printf("[ERR] poll error: %v\n", err)
+			pool.Submit(func() {
+				fetches := cl.PollRecords(ctx, 10000)
+				if fetches.IsClientClosed() {
+					return
 				}
-				return
-			}
 
-			// Process fetched records
-			records := fetches.Records()
-			if len(records) == 0 {
-				continue
-			}
+				// Handle errors if any
+				if errs := fetches.Errors(); len(errs) > 0 {
+					for _, err := range errs {
+						fmt.Printf("[ERR] poll error: %v\n", err)
+					}
+					return
+				}
 
-			totalRecords += len(records)
-			for i, record := range records {
+				// Process fetched records
+				records := fetches.Records()
+				if len(records) == 0 {
+					return
+				}
+
+				totalRecords = atomic.AddInt64(&totalRecords, int64(len(records)))
+				for i, record := range records {
+					if !skipLog {
+						fmt.Printf("[INFO] record:%d: %s (partition: %d, offset: %d)\n",
+							i, string(record.Value), record.Partition, record.Offset)
+					}
+				}
+
+				offsets := kadm.OffsetsFromFetches(fetches)
+				_, err := adm.CommitOffsets(context.Background(), group, offsets)
+				if err != nil {
+					fmt.Printf("[ERR] Failed to commit offsets: %v\n", err)
+					return
+				}
+
+				fmt.Printf("[INFO] Successfully committed %d/%d record(s)!\n", totalRecords, poll)
+
 				if !skipLog {
-					fmt.Printf("[INFO] record:%d: %s (partition: %d, offset: %d)\n",
-						i, string(record.Value), record.Partition, record.Offset)
+					lastRecord := records[len(records)-1]
+					fmt.Printf("[INFO] Successfully committed record on partition %d at offset %d!\n",
+						lastRecord.Partition, lastRecord.Offset)
 				}
-			}
-
-			offsets := kadm.OffsetsFromFetches(fetches)
-			_, err := adm.CommitOffsets(context.Background(), group, offsets)
-			if err != nil {
-				fmt.Printf("[ERR] Failed to commit offsets: %v\n", err)
-				return
-			}
-
-			fmt.Printf("[INFO] Successfully committed %d/%d record(s)!\n", totalRecords, poll)
-
-			if !skipLog {
-				lastRecord := records[len(records)-1]
-				fmt.Printf("[INFO] Successfully committed record on partition %d at offset %d!\n",
-					lastRecord.Partition, lastRecord.Offset)
-			}
+			})
 		}
 	}
+
+	pool.StopAndWait()
 
 	if skipLog {
 		fmt.Printf("[INFO] Successfully committed %d record(s)!\n", totalRecords)
