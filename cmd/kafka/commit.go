@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
@@ -105,6 +106,8 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	}
 	defer cl.Close()
 
+	adm := kadm.NewClient(cl)
+
 	fmt.Printf("Waiting for %d record(s)...\n", poll)
 	totalRecords := 0
 
@@ -141,9 +144,9 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 				}
 			}
 
-			// Manually commit offsets
-			if err := cl.CommitRecords(ctx, records...); err != nil {
-				fmt.Println("failed to commit offsets. err:", err)
+			offsets := kadm.OffsetsFromFetches(fetches)
+			if err := adm.CommitAllOffsets(context.Background(), group, offsets); err != nil {
+				fmt.Printf("Failed to commit offsets: %v\n", err)
 				return
 			}
 
