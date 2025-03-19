@@ -90,16 +90,14 @@ func consumeOffsetMessage(cmd *cobra.Command, args []string) {
 	// Configure the Kafka client with consumer group settings
 	cl, err := kgo.NewClient(
 		kgo.SeedBrokers(strings.Split(brokers, ",")...),
-		kgo.ConsumerGroup(group),                                          // Join the consumer group
-		kgo.ConsumeTopics(topic),                                          // Subscribe to the topic
 		kgo.WithLogger(kgo.BasicLogger(os.Stderr, kgo.LogLevelInfo, nil)), // Optional: for debugging
 		// kgo.DialTimeout(5*time.Minute),
 		// kgo.RequestTimeoutOverhead(5*time.Minute),
 		// kgo.RetryTimeout(11*time.Second), // if updating this, update below's SetTimeoutMillis
 		// kgo.MetadataMinAge(250*time.Millisecond),
-		kgo.RetryTimeout(0),
-		kgo.MetadataMaxAge(2*time.Minute),
-		kgo.ClientID("scm-kit"),
+		// kgo.RetryTimeout(0),
+		// kgo.MetadataMaxAge(2*time.Minute),
+		// kgo.ClientID("scm-kit"),
 	)
 	if err != nil {
 		fmt.Println("failed to create client. err:", err)
