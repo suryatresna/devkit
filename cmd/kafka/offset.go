@@ -43,7 +43,7 @@ func init() {
 	offsetCmd.Flags().StringP("topic", "t", "", "topic name")
 	offsetCmd.Flags().StringP("brokers", "b", "", "brokers")
 	offsetCmd.Flags().IntP("offset", "o", 1, "max poll offset")
-	offsetCmd.Flags().StringP("datetime", "t", "", "time format 3/19/2025, 12:06:37")
+	offsetCmd.Flags().StringP("datetime", "d", "", "time format 3/19/2025, 12:06:37")
 }
 
 func consumeOffsetMessage(cmd *cobra.Command, args []string) {
