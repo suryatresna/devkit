@@ -93,11 +93,10 @@ func consumeOffsetMessage(cmd *cobra.Command, args []string) {
 		kgo.ConsumerGroup(group),                                          // Join the consumer group
 		kgo.ConsumeTopics(topic),                                          // Subscribe to the topic
 		kgo.WithLogger(kgo.BasicLogger(os.Stderr, kgo.LogLevelInfo, nil)), // Optional: for debugging
-		kgo.DisableAutoCommit(),
-		kgo.DialTimeout(60*time.Second),
-		kgo.RequestTimeoutOverhead(60*time.Second),
-		kgo.RetryTimeout(11*time.Second), // if updating this, update below's SetTimeoutMillis
-		kgo.MetadataMinAge(250*time.Millisecond),
+		kgo.DialTimeout(5*time.Minute),
+		// kgo.RequestTimeoutOverhead(5*time.Minute),
+		// kgo.RetryTimeout(11*time.Second), // if updating this, update below's SetTimeoutMillis
+		// kgo.MetadataMinAge(250*time.Millisecond),
 		kgo.ClientID("scm-kit"),
 	)
 	if err != nil {
