@@ -97,6 +97,8 @@ func consumeOffsetMessage(cmd *cobra.Command, args []string) {
 		// kgo.RequestTimeoutOverhead(5*time.Minute),
 		// kgo.RetryTimeout(11*time.Second), // if updating this, update below's SetTimeoutMillis
 		// kgo.MetadataMinAge(250*time.Millisecond),
+		kgo.RetryTimeout(0),
+		kgo.MetadataMaxAge(2*time.Minute),
 		kgo.ClientID("scm-kit"),
 	)
 	if err != nil {
