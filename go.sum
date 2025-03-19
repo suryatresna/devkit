@@ -6,8 +6,6 @@ github.com/abiosoft/ishell/v2 v2.0.2 h1:5qVfGiQISaYM8TkbBl7RFO6MddABoXpATrsFbVI+
 github.com/abiosoft/ishell/v2 v2.0.2/go.mod h1:E4oTCXfo6QjoCart0QYa5m9w4S+deXs/P/9jA77A9Bs=
 github.com/abiosoft/readline v0.0.0-20180607040430-155bce2042db h1:CjPUSXOiYptLbTdr1RceuZgSFDQ7U15ITERUGrUORx8=
 github.com/abiosoft/readline v0.0.0-20180607040430-155bce2042db/go.mod h1:rB3B4rKii8V21ydCbIzH5hZiCQE7f5E9SzUb/ZZx530=
-github.com/alitto/pond/v2 v2.2.0 h1:hX3B1Lu4b5PjSHR+IWNRDKD0Jfw2ew8V25J7Vu5j7RM=
-github.com/alitto/pond/v2 v2.2.0/go.mod h1:xkjYEgQ05RSpWdfSd1nM3OVv7TBhLdy7rMp3+2Nq+yE=
 github.com/chrusty/go-tableprinter v0.0.0-20190528113659-0de6c8f09400 h1:t4Q42O0kbclVmTpABlO0h1KJR+wbF/VfYebc2Sme76k=
 github.com/chrusty/go-tableprinter v0.0.0-20190528113659-0de6c8f09400/go.mod h1:50rBr+hh7FVL5JPCc7EF7/6b9x+8ChfEOFCsDdf/CyM=
 github.com/chzyer/logex v1.1.10 h1:Swpa1K6QvQznwJRcfTfQJmTE72DqScAa40E+fbHEXEE=

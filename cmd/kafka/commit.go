@@ -104,8 +104,6 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 	}
 	defer cl.Close()
 
-	// adm := kadm.NewClient(cl)
-
 	fmt.Printf("[INFO] Waiting for %d record(s)...\n", poll)
 	totalRecords := int64(0)
 
@@ -130,13 +128,6 @@ func consumeMessage(cmd *cobra.Command, args []string) {
 			}
 
 			totalRecords += int64(fetches.NumRecords())
-
-			// offsets := kadm.OffsetsFromFetches(fetches)
-			// _, err := adm.CommitOffsets(context.Background(), group, offsets)
-			// if err != nil {
-			// 	fmt.Printf("[ERR] Failed to commit offsets: %v\n", err)
-			// 	return
-			// }
 
 			if err := cl.CommitUncommittedOffsets(ctx); err != nil {
 				fmt.Printf("[ERR] Failed to commit offsets: %v\n", err)

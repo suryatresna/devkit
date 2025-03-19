@@ -4,7 +4,6 @@ go 1.21.4
 
 require (
 	github.com/abiosoft/ishell/v2 v2.0.2
-	github.com/alitto/pond/v2 v2.2.0
 	github.com/chrusty/go-tableprinter v0.0.0-20190528113659-0de6c8f09400
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gocraft/work v0.5.1
