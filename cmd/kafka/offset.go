@@ -93,6 +93,12 @@ func consumeOffsetMessage(cmd *cobra.Command, args []string) {
 		kgo.ConsumerGroup(group),                                          // Join the consumer group
 		kgo.ConsumeTopics(topic),                                          // Subscribe to the topic
 		kgo.WithLogger(kgo.BasicLogger(os.Stderr, kgo.LogLevelInfo, nil)), // Optional: for debugging
+		kgo.DisableAutoCommit(),
+		kgo.DialTimeout(3*time.Second),
+		kgo.RequestTimeoutOverhead(5*time.Second),
+		kgo.RetryTimeout(11*time.Second), // if updating this, update below's SetTimeoutMillis
+		kgo.MetadataMinAge(250*time.Millisecond),
+		kgo.ClientID("scm-kit"),
 	)
 	if err != nil {
 		fmt.Println("failed to create client. err:", err)
@@ -100,9 +106,10 @@ func consumeOffsetMessage(cmd *cobra.Command, args []string) {
 	}
 	defer cl.Close()
 
-	adm := kadm.NewClient(cl)
-
 	ctx := context.Background()
+
+	adm := kadm.NewClient(cl)
+	adm.SetTimeoutMillis(5000)
 
 	var (
 		listed   kadm.ListedOffsets
