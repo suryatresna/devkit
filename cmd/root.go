@@ -7,9 +7,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/suryatresna/devkit/cmd/gocraft"
 	"github.com/suryatresna/devkit/cmd/kafka"
-	"github.com/suryatresna/devkit/cmd/sql"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -45,6 +43,4 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	rootCmd.AddCommand(kafka.KafkaCmd)
-	rootCmd.AddCommand(gocraft.GocraftCmd)
-	rootCmd.AddCommand(sql.SqlCmd)
 }
