@@ -1,7 +1,7 @@
 /*
 Copyright © 2024 Surya Tresna <surya.tresna@gmail.com>
 */
-package gocraft
+package worker
 
 import (
 	"encoding/json"
@@ -12,37 +12,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// workerCmd represents the produce command
-var workerCmd = &cobra.Command{
-	Use:   "worker",
-	Short: "add triggering worker on gocraft",
-	Long: `Triggering worker on gocraft via command 
-	Example:
-	app gocraft worker --redis 127.0.0.1:6379 --ns FooNameSpace  --job 'FooJob'
-	`,
+var gocraftCmd = &cobra.Command{
+	Use:   "gocraft",
+	Short: "gocraft toolkit",
+	Long:  `Mini tool for gocraft usage like triggering worker.`,
+	// Uncomment the following line if your bare application
+	// has an action associated with it:
+	// Run: func(cmd *cobra.Command, args []string) { },
 	Run: addWorker,
 }
 
 func init() {
-	GocraftCmd.AddCommand(workerCmd)
-
 	// Here you will define your flags and configuration settings.
+	// Cobra supports persistent flags, which, if defined here,
+	// will be global for your application.
 
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// produceCmd.PersistentFlags().String("foo", "", "A help for foo")
+	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.devkit.yaml)")
 
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// produceCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
-	workerCmd.Flags().StringP("job", "j", "", "job name worker")
-	workerCmd.Flags().StringP("ns", "n", "", "name space worker")
-	workerCmd.Flags().StringP("redis", "r", "", "host redis")
-	workerCmd.Flags().StringP("pwd", "a", "", "password redis")
-	workerCmd.Flags().StringP("username", "u", "", "username redis")
-	workerCmd.Flags().StringP("json", "v", "", "json payload worker")
-
+	// Cobra also supports local flags, which will only run
+	// when this action is called directly.
+	gocraftCmd.Flags().StringP("job", "j", "", "job name worker")
+	gocraftCmd.Flags().StringP("ns", "n", "", "name space worker")
+	gocraftCmd.Flags().StringP("redis", "r", "", "host redis")
+	gocraftCmd.Flags().StringP("pwd", "a", "", "password redis")
+	gocraftCmd.Flags().StringP("username", "u", "", "username redis")
+	gocraftCmd.Flags().StringP("json", "v", "", "json payload worker")
 }
 
 func addWorker(cmd *cobra.Command, args []string) {
